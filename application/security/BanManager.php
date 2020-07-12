@@ -46,7 +46,8 @@ class BanManager
      * @param string $banFile        Path to the file containing IP bans and failures
      * @param string $logFile        Path to the log file, used to log bans
      */
-    public function __construct($trustedProxies, $nbAttempts, $banDuration, $banFile, $logFile) {
+    public function __construct($trustedProxies, $nbAttempts, $banDuration, $banFile, $logFile)
+    {
         $this->trustedProxies = $trustedProxies;
         $this->nbAttempts = $nbAttempts;
         $this->banDuration = $banDuration;

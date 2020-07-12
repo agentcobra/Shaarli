@@ -68,8 +68,12 @@ class BookmarkIO
         // Note that gzinflate is faster than gzuncompress.
         // See: http://www.php.net/manual/en/function.gzdeflate.php#96439
         $links = unserialize(gzinflate(base64_decode(
-            substr(file_get_contents($this->datastore),
-                strlen(self::$phpPrefix), -strlen(self::$phpSuffix)))));
+            substr(
+                file_get_contents($this->datastore),
+                strlen(self::$phpPrefix),
+                -strlen(self::$phpSuffix)
+            )
+        )));
 
         if (empty($links)) {
             if (filesize($this->datastore) > 100) {
@@ -93,7 +97,7 @@ class BookmarkIO
         if (is_file($this->datastore) && !is_writeable($this->datastore)) {
             // The datastore exists but is not writeable
             throw new NotWritableDataStoreException($this->datastore);
-        } else if (!is_file($this->datastore) && !is_writeable(dirname($this->datastore))) {
+        } elseif (!is_file($this->datastore) && !is_writeable(dirname($this->datastore))) {
             // The datastore does not exist and its parent directory is not writeable
             throw new NotWritableDataStoreException(dirname($this->datastore));
         }

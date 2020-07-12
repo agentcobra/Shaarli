@@ -3,5 +3,6 @@
 
 namespace Shaarli\Bookmark\Exception;
 
-
-class EmptyDataStoreException extends \Exception {}
+class EmptyDataStoreException extends \Exception
+{
+}

@@ -3,7 +3,6 @@
 
 namespace Shaarli\Bookmark\Exception;
 
-
 class NotWritableDataStoreException extends \Exception
 {
     /**

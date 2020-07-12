@@ -37,7 +37,10 @@ function get_curl_download_callback(
      *
      * @return int|bool length of $data or false if we need to stop the download
      */
-    return function (&$ch, $data) use (
+    return function (
+        &$ch,
+        $data
+    ) use (
         $retrieveDescription,
         $curlGetInfo,
         &$charset,
@@ -85,7 +88,7 @@ function get_curl_download_callback(
                 $foundChunk = $currentChunk;
                 // Keywords use the format tag1, tag2 multiple words, tag
                 // So we format them to match Shaarli's separator and glue multiple words with '-'
-                $keywords = implode(' ', array_map(function($keyword) {
+                $keywords = implode(' ', array_map(function ($keyword) {
                     return implode('-', preg_split('/\s+/', trim($keyword)));
                 }, explode(',', $keywords)));
             }

@@ -3,7 +3,6 @@
 
 namespace Shaarli\Bookmark;
 
-
 use Exception;
 use Shaarli\Bookmark\Exception\BookmarkNotFoundException;
 use Shaarli\Bookmark\Exception\EmptyDataStoreException;

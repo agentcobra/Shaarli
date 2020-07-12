@@ -71,7 +71,7 @@ function hook_default_colors_save_plugin_parameters($data)
 function hook_default_colors_render_includes($data)
 {
     $file = PluginManager::$PLUGINS_PATH . '/default_colors/default_colors.css';
-    if (file_exists($file )) {
+    if (file_exists($file)) {
         $data['css_files'][] = $file ;
     }
 
