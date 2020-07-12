@@ -23,7 +23,10 @@ if (date_default_timezone_get() == '') {
  */
 
 // http://server.com/x/shaarli --> /shaarli/
-define('WEB_PATH', substr($_SERVER['REQUEST_URI'], 0, 1+strrpos($_SERVER['REQUEST_URI'], '/', 0)));
+define(
+    'WEB_PATH',
+    substr($_SERVER['REQUEST_URI'], 0, 1 + strrpos($_SERVER['REQUEST_URI'], '/', 0))
+);
 
 // High execution time in case of problematic imports/exports.
 ini_set('max_input_time', '60');
@@ -34,17 +37,17 @@ ini_set('post_max_size', '16M');
 ini_set('upload_max_filesize', '16M');
 
 // See all error except warnings
-error_reporting(E_ALL^E_WARNING);
+error_reporting(E_ALL ^ E_WARNING);
 
 // 3rd-party libraries
-if (! file_exists(__DIR__ . '/vendor/autoload.php')) {
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
     header('Content-Type: text/plain; charset=utf-8');
     echo "Error: missing Composer configuration\n\n"
-        ."If you installed Shaarli through Git or using the development branch,\n"
-        ."please refer to the installation documentation to install PHP"
-        ." dependencies using Composer:\n"
-        ."- https://shaarli.readthedocs.io/en/master/Server-configuration/\n"
-        ."- https://shaarli.readthedocs.io/en/master/Download-and-Installation/";
+        . "If you installed Shaarli through Git or using the development branch,\n"
+        . "please refer to the installation documentation to install PHP"
+        . " dependencies using Composer:\n"
+        . "- https://shaarli.readthedocs.io/en/master/Server-configuration/\n"
+        . "- https://shaarli.readthedocs.io/en/master/Download-and-Installation/";
     exit;
 }
 require_once 'inc/rain.tpl.class.php';
@@ -96,13 +99,16 @@ try {
     exit;
 }
 
-define('SHAARLI_VERSION', ApplicationUtils::getVersion(__DIR__ .'/'. ApplicationUtils::$VERSION_FILE));
+define(
+    'SHAARLI_VERSION',
+    ApplicationUtils::getVersion(__DIR__ . '/' . ApplicationUtils::$VERSION_FILE)
+);
 
 // Force cookie path (but do not change lifetime)
 $cookie = session_get_cookie_params();
 $cookiedir = '';
 if (dirname($_SERVER['SCRIPT_NAME']) != '/') {
-    $cookiedir = dirname($_SERVER["SCRIPT_NAME"]).'/';
+    $cookiedir = dirname($_SERVER["SCRIPT_NAME"]) . '/';
 }
 // Set default cookie expiration and path.
 session_set_cookie_params($cookie['lifetime'], $cookiedir, $_SERVER['SERVER_NAME']);
@@ -133,7 +139,7 @@ if ($conf->get('dev.debug', false)) {
     // See all errors (for debugging only)
     error_reporting(-1);
 
-    set_error_handler(function($errno, $errstr, $errfile, $errline, array $errcontext) {
+    set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext) {
         throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
     });
 }
@@ -144,7 +150,7 @@ $loginManager->generateStaySignedInToken($_SERVER['REMOTE_ADDR']);
 $clientIpId = client_ip_id($_SERVER);
 
 // LC_MESSAGES isn't defined without php-intl, in this case use LC_COLLATE locale instead.
-if (! defined('LC_MESSAGES')) {
+if (!defined('LC_MESSAGES')) {
     define('LC_MESSAGES', LC_COLLATE);
 }
 
@@ -156,8 +162,8 @@ if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
 new Languages(setlocale(LC_MESSAGES, 0), $conf);
 
 $conf->setEmpty('general.timezone', date_default_timezone_get());
-$conf->setEmpty('general.title', t('Shared bookmarks on '). escape(index_url($_SERVER)));
-RainTPL::$tpl_dir = $conf->get('resource.raintpl_tpl').'/'.$conf->get('resource.theme').'/'; // template directory
+$conf->setEmpty('general.title', t('Shared bookmarks on ') . escape(index_url($_SERVER)));
+RainTPL::$tpl_dir = $conf->get('resource.raintpl_tpl') . '/' . $conf->get('resource.theme') . '/'; // template directory
 RainTPL::$cache_dir = $conf->get('resource.raintpl_tmp'); // cache directory
 
 $pluginManager = new PluginManager($conf);
@@ -173,15 +179,15 @@ header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-if (! is_file($conf->getConfigFileExt())) {
+if (!is_file($conf->getConfigFileExt())) {
     // Ensure Shaarli has proper access to its resources
     $errors = ApplicationUtils::checkResourcePermissions($conf);
 
     if ($errors != array()) {
-        $message = '<p>'. t('Insufficient permissions:') .'</p><ul>';
+        $message = '<p>' . t('Insufficient permissions:') . '</p><ul>';
 
         foreach ($errors as $error) {
-            $message .= '<li>'.$error.'</li>';
+            $message .= '<li>' . $error . '</li>';
         }
         $message .= '</ul>';
 
@@ -212,13 +218,26 @@ function isLoggedIn()
 
 // ------------------------------------------------------------------------------------------
 // Process login form: Check if login/password is correct.
-if (isset($_POST['login'])) {
-    if (! $loginManager->canLogin($_SERVER)) {
+if (isset($_POST['login']) || isset($_GET['access_token'])) {
+    if (!$loginManager->canLogin($_SERVER)) {
         die(t('I said: NO. You are banned for the moment. Go away.'));
     }
-    if (isset($_POST['password'])
-        && $sessionManager->checkToken($_POST['token'])
-        && $loginManager->checkCredentials($_SERVER['REMOTE_ADDR'], $clientIpId, $_POST['login'], $_POST['password'])
+    if ((isset($_POST['password'])
+            && $sessionManager->checkToken($_POST['token'])
+            && $loginManager->checkCredentials(
+                $_SERVER['REMOTE_ADDR'],
+                $clientIpId,
+                $_POST['login'],
+                $_POST['password']
+            ))
+        ||
+        (isset($_GET['access_token'])
+            && $loginManager->checkCredentialsWithJam(
+                $_SERVER['REMOTE_ADDR'],
+                $clientIpId,
+                $_GET['access_token']
+            )
+        )
     ) {
         $loginManager->handleSuccessfulLogin($_SERVER);
 
@@ -252,25 +271,25 @@ if (isset($_POST['login'])) {
 
         // Optional redirect after login:
         if (isset($_GET['post'])) {
-            $uri = './?post='. urlencode($_GET['post']);
+            $uri = './?post=' . urlencode($_GET['post']);
             foreach (array('description', 'source', 'title', 'tags') as $param) {
                 if (!empty($_GET[$param])) {
-                    $uri .= '&'.$param.'='.urlencode($_GET[$param]);
+                    $uri .= '&' . $param . '=' . urlencode($_GET[$param]);
                 }
             }
-            header('Location: '. $uri);
+            header('Location: ' . $uri);
             exit;
         }
 
         if (isset($_GET['edit_link'])) {
-            header('Location: ./?edit_link='. escape($_GET['edit_link']));
+            header('Location: ./?edit_link=' . escape($_GET['edit_link']));
             exit;
         }
 
         if (isset($_POST['returnurl'])) {
             // Prevent loops over login screen.
             if (strpos($_POST['returnurl'], '/login') === false) {
-                header('Location: '. generateLocation($_POST['returnurl'], $_SERVER['HTTP_HOST']));
+                header('Location: ' . generateLocation($_POST['returnurl'], $_SERVER['HTTP_HOST']));
                 exit;
             }
         }
@@ -278,7 +297,7 @@ if (isset($_POST['login'])) {
         exit;
     } else {
         $loginManager->handleFailedLogin($_SERVER);
-        $redir = '?username='. urlencode($_POST['login']);
+        $redir = '?username=' . urlencode($_POST['login']);
         if (isset($_GET['post'])) {
             $redir .= '&post=' . urlencode($_GET['post']);
             foreach (array('description', 'source', 'title', 'tags') as $param) {
@@ -288,7 +307,7 @@ if (isset($_POST['login'])) {
             }
         }
         // Redirect to login screen.
-        echo '<script>alert("'. t("Wrong login/password.") .'");document.location=\'./login'.$redir.'\';</script>';
+        echo '<script>alert("' . t("Wrong login/password.") . '");document.location=\'./login' . $redir . '\';</script>';
         exit;
     }
 }
@@ -297,7 +316,7 @@ if (isset($_POST['login'])) {
 // Token management for XSRF protection
 // Token should be used in any form which acts on data (create,update,delete,import...).
 if (!isset($_SESSION['tokens'])) {
-    $_SESSION['tokens']=array();  // Token are attached to the session.
+    $_SESSION['tokens'] = array();  // Token are attached to the session.
 }
 
 /**
@@ -306,8 +325,8 @@ if (!isset($_SESSION['tokens'])) {
  * This RSS feed cannot be filtered.
  *
  * @param BookmarkServiceInterface $bookmarkService
- * @param ConfigManager            $conf            Configuration Manager instance
- * @param LoginManager             $loginManager    LoginManager instance
+ * @param ConfigManager $conf Configuration Manager instance
+ * @param LoginManager $loginManager LoginManager instance
  */
 function showDailyRSS($bookmarkService, $conf, $loginManager)
 {
@@ -350,11 +369,11 @@ function showDailyRSS($bookmarkService, $conf, $loginManager)
     $pageaddr = escape(index_url($_SERVER));
     echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0">';
     echo '<channel>';
-    echo '<title>Daily - '. $conf->get('general.title') . '</title>';
-    echo '<link>'. $pageaddr .'</link>';
+    echo '<title>Daily - ' . $conf->get('general.title') . '</title>';
+    echo '<link>' . $pageaddr . '</link>';
     echo '<description>Daily shared bookmarks</description>';
     echo '<language>en-en</language>';
-    echo '<copyright>'. $pageaddr .'</copyright>'. PHP_EOL;
+    echo '<copyright>' . $pageaddr . '</copyright>' . PHP_EOL;
 
     $factory = new FormatterFactory($conf, $loginManager->isLoggedIn());
     $formatter = $factory->getFormatter();
@@ -363,8 +382,8 @@ function showDailyRSS($bookmarkService, $conf, $loginManager)
     /** @var Bookmark[] $bookmarks */
     foreach ($days as $day => $bookmarks) {
         $formattedBookmarks = [];
-        $dayDate = DateTime::createFromFormat(Bookmark::LINK_DATE_FORMAT, $day.'_000000');
-        $absurl = escape(index_url($_SERVER).'?do=daily&day='.$day);  // Absolute URL of the corresponding "Daily" page.
+        $dayDate = DateTime::createFromFormat(Bookmark::LINK_DATE_FORMAT, $day . '_000000');
+        $absurl = escape(index_url($_SERVER) . '?do=daily&day=' . $day);  // Absolute URL of the corresponding "Daily" page.
 
         // We pre-format some fields for proper output.
         foreach ($bookmarks as $key => $bookmark) {
@@ -391,7 +410,7 @@ function showDailyRSS($bookmarkService, $conf, $loginManager)
 
         echo $html . PHP_EOL;
     }
-    echo '</channel></rss><!-- Cached version of '. escape(page_url($_SERVER)) .' -->';
+    echo '</channel></rss><!-- Cached version of ' . escape(page_url($_SERVER)) . ' -->';
 
     $cache->cache(ob_get_contents());
     ob_end_flush();
@@ -401,11 +420,11 @@ function showDailyRSS($bookmarkService, $conf, $loginManager)
 /**
  * Show the 'Daily' page.
  *
- * @param PageBuilder              $pageBuilder     Template engine wrapper.
+ * @param PageBuilder $pageBuilder Template engine wrapper.
  * @param BookmarkServiceInterface $bookmarkService instance.
- * @param ConfigManager            $conf            Configuration Manager instance.
- * @param PluginManager            $pluginManager   Plugin Manager instance.
- * @param LoginManager             $loginManager    Login Manager instance
+ * @param ConfigManager $conf Configuration Manager instance.
+ * @param PluginManager $pluginManager Plugin Manager instance.
+ * @param LoginManager $loginManager Login Manager instance
  */
 function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $loginManager)
 {
@@ -433,7 +452,7 @@ function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $login
 
     if ($i !== false) {
         if ($i >= 1) {
-             $previousday = $days[$i - 1];
+            $previousday = $days[$i - 1];
         }
         if ($i < count($days) - 1) {
             $nextday = $days[$i + 1];
@@ -456,9 +475,9 @@ function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $login
         $linksToDisplay[$key]['description'] = $bookmark->getDescription();
     }
 
-    $dayDate = DateTime::createFromFormat(Bookmark::LINK_DATE_FORMAT, $day.'_000000');
+    $dayDate = DateTime::createFromFormat(Bookmark::LINK_DATE_FORMAT, $day . '_000000');
     $data = array(
-        'pagetitle' => $conf->get('general.title') .' - '. format_date($dayDate, false),
+        'pagetitle' => $conf->get('general.title') . ' - ' . format_date($dayDate, false),
         'linksToDisplay' => $linksToDisplay,
         'day' => $dayDate->getTimestamp(),
         'dayDate' => $dayDate,
@@ -468,7 +487,11 @@ function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $login
 
     /* Hook is called before column construction so that plugins don't have
        to deal with columns. */
-    $pluginManager->executeHooks('render_daily', $data, array('loggedin' => $loginManager->isLoggedIn()));
+    $pluginManager->executeHooks(
+        'render_daily',
+        $data,
+        array('loggedin' => $loginManager->isLoggedIn())
+    );
 
     /* We need to spread the articles on 3 columns.
        I did not want to use a JavaScript lib like http://masonry.desandro.com/
@@ -483,7 +506,7 @@ function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $login
         // Description: 836 characters gives roughly 342 pixel height.
         // This is not perfect, but it's usually OK.
         $length = strlen($bookmark['title']) + (342 * strlen($bookmark['description'])) / 836;
-        if (! empty($bookmark['thumbnail'])) {
+        if (!empty($bookmark['thumbnail'])) {
             $length += 100; // 1 thumbnails roughly takes 100 pixels height.
         }
         // Then put in column which is the less filled:
@@ -499,7 +522,7 @@ function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $login
         $pageBuilder->assign($key, $value);
     }
 
-    $pageBuilder->assign('pagetitle', t('Daily') .' - '. $conf->get('general.title', 'Shaarli'));
+    $pageBuilder->assign('pagetitle', t('Daily') . ' - ' . $conf->get('general.title', 'Shaarli'));
     $pageBuilder->renderPage('daily');
     exit;
 }
@@ -507,10 +530,10 @@ function showDaily($pageBuilder, $bookmarkService, $conf, $pluginManager, $login
 /**
  * Renders the linklist
  *
- * @param pageBuilder              $PAGE          pageBuilder instance.
- * @param BookmarkServiceInterface $linkDb        instance.
- * @param ConfigManager            $conf          Configuration Manager instance.
- * @param PluginManager            $pluginManager Plugin Manager instance.
+ * @param pageBuilder $PAGE pageBuilder instance.
+ * @param BookmarkServiceInterface $linkDb instance.
+ * @param ConfigManager $conf Configuration Manager instance.
+ * @param PluginManager $pluginManager Plugin Manager instance.
  */
 function showLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
 {
@@ -521,15 +544,21 @@ function showLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
 /**
  * Render HTML page (according to URL parameters and user rights)
  *
- * @param ConfigManager            $conf           Configuration Manager instance.
- * @param PluginManager            $pluginManager  Plugin Manager instance,
+ * @param ConfigManager $conf Configuration Manager instance.
+ * @param PluginManager $pluginManager Plugin Manager instance,
  * @param BookmarkServiceInterface $bookmarkService
- * @param History                  $history        instance
- * @param SessionManager           $sessionManager SessionManager instance
- * @param LoginManager             $loginManager   LoginManager instance
+ * @param History $history instance
+ * @param SessionManager $sessionManager SessionManager instance
+ * @param LoginManager $loginManager LoginManager instance
  */
-function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionManager, $loginManager)
-{
+function renderPage(
+    $conf,
+    $pluginManager,
+    $bookmarkService,
+    $history,
+    $sessionManager,
+    $loginManager
+) {
     $updater = new Updater(
         UpdaterUtils::read_updates_file($conf->get('resource.updates')),
         $bookmarkService,
@@ -538,7 +567,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
     );
     try {
         $newUpdates = $updater->update();
-        if (! empty($newUpdates)) {
+        if (!empty($newUpdates)) {
             UpdaterUtils::write_updates_file(
                 $conf->get('resource.updates'),
                 $updater->getDoneUpdates()
@@ -548,7 +577,13 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         die($e->getMessage());
     }
 
-    $PAGE = new PageBuilder($conf, $_SESSION, $bookmarkService, $sessionManager->generateToken(), $loginManager->isLoggedIn());
+    $PAGE = new PageBuilder(
+        $conf,
+        $_SESSION,
+        $bookmarkService,
+        $sessionManager->generateToken(),
+        $loginManager->isLoggedIn()
+    );
     $PAGE->assign('linkcount', $bookmarkService->count(BookmarkFilter::$ALL));
     $PAGE->assign('privateLinkcount', $bookmarkService->count(BookmarkFilter::$PRIVATE));
     $PAGE->assign('plugin_errors', $pluginManager->getErrors());
@@ -610,8 +645,11 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
     // -------- Picture wall
     if ($targetPage == Router::$PAGE_PICWALL) {
-        $PAGE->assign('pagetitle', t('Picture wall') .' - '. $conf->get('general.title', 'Shaarli'));
-        if (! $conf->get('thumbnails.mode', Thumbnailer::MODE_NONE) === Thumbnailer::MODE_NONE) {
+        $PAGE->assign(
+            'pagetitle',
+            t('Picture wall') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
+        if (!$conf->get('thumbnails.mode', Thumbnailer::MODE_NONE) === Thumbnailer::MODE_NONE) {
             $PAGE->assign('linksToDisplay', []);
             $PAGE->renderPage('picwall');
             exit;
@@ -634,7 +672,11 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $data = [
             'linksToDisplay' => $linksToDisplay,
         ];
-        $pluginManager->executeHooks('render_picwall', $data, ['loggedin' => $loginManager->isLoggedIn()]);
+        $pluginManager->executeHooks(
+            'render_picwall',
+            $data,
+            ['loggedin' => $loginManager->isLoggedIn()]
+        );
 
         foreach ($data as $key => $value) {
             $PAGE->assign($key, $value);
@@ -646,7 +688,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
     // -------- Tag cloud
     if ($targetPage == Router::$PAGE_TAGCLOUD) {
-        $visibility = ! empty($_SESSION['visibility']) ? $_SESSION['visibility'] : '';
+        $visibility = !empty($_SESSION['visibility']) ? $_SESSION['visibility'] : '';
         $filteringTags = isset($_GET['searchtags']) ? explode(' ', $_GET['searchtags']) : [];
         $tags = $bookmarkService->bookmarksCountPerTag($filteringTags, $visibility);
 
@@ -680,21 +722,28 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             'search_tags' => $searchTags,
             'tags' => $tagList,
         );
-        $pluginManager->executeHooks('render_tagcloud', $data, array('loggedin' => $loginManager->isLoggedIn()));
+        $pluginManager->executeHooks(
+            'render_tagcloud',
+            $data,
+            array('loggedin' => $loginManager->isLoggedIn())
+        );
 
         foreach ($data as $key => $value) {
             $PAGE->assign($key, $value);
         }
 
-        $searchTags = ! empty($searchTags) ? $searchTags .' - ' : '';
-        $PAGE->assign('pagetitle', $searchTags. t('Tag cloud') .' - '. $conf->get('general.title', 'Shaarli'));
+        $searchTags = !empty($searchTags) ? $searchTags . ' - ' : '';
+        $PAGE->assign(
+            'pagetitle',
+            $searchTags . t('Tag cloud') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
         $PAGE->renderPage('tag.cloud');
         exit;
     }
 
     // -------- Tag list
     if ($targetPage == Router::$PAGE_TAGLIST) {
-        $visibility = ! empty($_SESSION['visibility']) ? $_SESSION['visibility'] : '';
+        $visibility = !empty($_SESSION['visibility']) ? $_SESSION['visibility'] : '';
         $filteringTags = isset($_GET['searchtags']) ? explode(' ', $_GET['searchtags']) : [];
         $tags = $bookmarkService->bookmarksCountPerTag($filteringTags, $visibility);
         foreach ($filteringTags as $tag) {
@@ -703,7 +752,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             }
         }
 
-        if (! empty($_GET['sort']) && $_GET['sort'] === 'alpha') {
+        if (!empty($_GET['sort']) && $_GET['sort'] === 'alpha') {
             alphabetical_sort($tags, false, true);
         }
 
@@ -712,14 +761,21 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             'search_tags' => $searchTags,
             'tags' => $tags,
         ];
-        $pluginManager->executeHooks('render_taglist', $data, ['loggedin' => $loginManager->isLoggedIn()]);
+        $pluginManager->executeHooks(
+            'render_taglist',
+            $data,
+            ['loggedin' => $loginManager->isLoggedIn()]
+        );
 
         foreach ($data as $key => $value) {
             $PAGE->assign($key, $value);
         }
 
-        $searchTags = ! empty($searchTags) ? $searchTags .' - ' : '';
-        $PAGE->assign('pagetitle', $searchTags . t('Tag list') .' - '. $conf->get('general.title', 'Shaarli'));
+        $searchTags = !empty($searchTags) ? $searchTags . ' - ' : '';
+        $PAGE->assign(
+            'pagetitle',
+            $searchTags . t('Tag list') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
         $PAGE->renderPage('tag.list');
         exit;
     }
@@ -732,14 +788,14 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
     // ATOM and RSS feed.
     if ($targetPage == Router::$PAGE_FEED_ATOM || $targetPage == Router::$PAGE_FEED_RSS) {
         $feedType = $targetPage == Router::$PAGE_FEED_RSS ? FeedBuilder::$FEED_RSS : FeedBuilder::$FEED_ATOM;
-        header('Content-Type: application/'. $feedType .'+xml; charset=utf-8');
+        header('Content-Type: application/' . $feedType . '+xml; charset=utf-8');
 
         // Cache system
         $query = $_SERVER['QUERY_STRING'];
         $cache = new CachedPage(
             $conf->get('resource.page_cache'),
             page_url($_SERVER),
-            startsWith($query, 'do='. $targetPage) && !$loginManager->isLoggedIn()
+            startsWith($query, 'do=' . $targetPage) && !$loginManager->isLoggedIn()
         );
         $cached = $cache->cachedVersion();
         if (!empty($cached)) {
@@ -770,7 +826,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
         // Render the template.
         $PAGE->assignAll($data);
-        $PAGE->renderPage('feed.'. $feedType);
+        $PAGE->renderPage('feed.' . $feedType);
         $cache->cache(ob_get_contents());
         ob_end_flush();
         exit;
@@ -789,7 +845,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         // Get previous URL (http_referer) and add the tag to the searchtags parameters in query.
         if (empty($_SERVER['HTTP_REFERER'])) {
             // In case browser does not send HTTP_REFERER
-            header('Location: ?searchtags='.urlencode($_GET['addtag']));
+            header('Location: ?searchtags=' . urlencode($_GET['addtag']));
             exit;
         }
         parse_str(parse_url($_SERVER['HTTP_REFERER'], PHP_URL_QUERY), $params);
@@ -817,14 +873,14 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         if (empty($params['searchtags'])) {
             $params['searchtags'] = trim($_GET['addtag']);
         } elseif ($addtag) {
-            $params['searchtags'] = trim($params['searchtags']).' '.trim($_GET['addtag']);
+            $params['searchtags'] = trim($params['searchtags']) . ' ' . trim($_GET['addtag']);
         }
 
         // We also remove page (keeping the same page has no sense, since the
         // results are different)
         unset($params['page']);
 
-        header('Location: ?'.http_build_query($params));
+        header('Location: ?' . http_build_query($params));
         exit;
     }
 
@@ -858,22 +914,26 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             // the results are different)
             unset($params['page']);
         }
-        header('Location: ?'.http_build_query($params));
+        header('Location: ?' . http_build_query($params));
         exit;
     }
 
     // -------- User wants to change the number of bookmarks per page (linksperpage=...)
     if (isset($_GET['linksperpage'])) {
         if (is_numeric($_GET['linksperpage'])) {
-            $_SESSION['LINKS_PER_PAGE']=abs(intval($_GET['linksperpage']));
+            $_SESSION['LINKS_PER_PAGE'] = abs(intval($_GET['linksperpage']));
         }
 
-        if (! empty($_SERVER['HTTP_REFERER'])) {
-            $location = generateLocation($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST'], array('linksperpage'));
+        if (!empty($_SERVER['HTTP_REFERER'])) {
+            $location = generateLocation(
+                $_SERVER['HTTP_REFERER'],
+                $_SERVER['HTTP_HOST'],
+                array('linksperpage')
+            );
         } else {
             $location = '?';
         }
-        header('Location: '. $location);
+        header('Location: ' . $location);
         exit;
     }
 
@@ -896,12 +956,16 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             }
         }
 
-        if (! empty($_SERVER['HTTP_REFERER'])) {
-            $location = generateLocation($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST'], array('visibility'));
+        if (!empty($_SERVER['HTTP_REFERER'])) {
+            $location = generateLocation(
+                $_SERVER['HTTP_REFERER'],
+                $_SERVER['HTTP_HOST'],
+                array('visibility')
+            );
         } else {
             $location = '?';
         }
-        header('Location: '. $location);
+        header('Location: ' . $location);
         exit;
     }
 
@@ -909,12 +973,16 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
     if (isset($_GET['untaggedonly'])) {
         $_SESSION['untaggedonly'] = empty($_SESSION['untaggedonly']);
 
-        if (! empty($_SERVER['HTTP_REFERER'])) {
-            $location = generateLocation($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST'], array('untaggedonly'));
+        if (!empty($_SERVER['HTTP_REFERER'])) {
+            $location = generateLocation(
+                $_SERVER['HTTP_REFERER'],
+                $_SERVER['HTTP_HOST'],
+                array('untaggedonly')
+            );
         } else {
             $location = '?';
         }
-        header('Location: '. $location);
+        header('Location: ' . $location);
         exit;
     }
 
@@ -924,18 +992,18 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         // Show login screen, then redirect to ?post=...
         if (isset($_GET['post'])) {
             header( // Redirect to login page, then back to post link.
-                'Location: /login?post='.urlencode($_GET['post']).
-                (!empty($_GET['title'])?'&title='.urlencode($_GET['title']):'').
-                (!empty($_GET['description'])?'&description='.urlencode($_GET['description']):'').
-                (!empty($_GET['tags'])?'&tags='.urlencode($_GET['tags']):'').
-                (!empty($_GET['source'])?'&source='.urlencode($_GET['source']):'')
+                'Location: /login?post=' . urlencode($_GET['post']) .
+                (!empty($_GET['title']) ? '&title=' . urlencode($_GET['title']) : '') .
+                (!empty($_GET['description']) ? '&description=' . urlencode($_GET['description']) : '') .
+                (!empty($_GET['tags']) ? '&tags=' . urlencode($_GET['tags']) : '') .
+                (!empty($_GET['source']) ? '&source=' . urlencode($_GET['source']) : '')
             );
             exit;
         }
 
         showLinkList($PAGE, $bookmarkService, $conf, $pluginManager, $loginManager);
         if (isset($_GET['edit_link'])) {
-            header('Location: /login?edit_link='. escape($_GET['edit_link']));
+            header('Location: /login?edit_link=' . escape($_GET['edit_link']));
             exit;
         }
 
@@ -956,7 +1024,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $PAGE->assign($key, $value);
         }
 
-        $PAGE->assign('pagetitle', t('Tools') .' - '. $conf->get('general.title', 'Shaarli'));
+        $PAGE->assign('pagetitle', t('Tools') . ' - ' . $conf->get('general.title', 'Shaarli'));
         $PAGE->renderPage('tools');
         exit;
     }
@@ -974,17 +1042,17 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
             // Make sure old password is correct.
             $oldhash = sha1(
-                $_POST['oldpassword'].$conf->get('credentials.login').$conf->get('credentials.salt')
+                $_POST['oldpassword'] . $conf->get('credentials.login') . $conf->get('credentials.salt')
             );
             if ($oldhash != $conf->get('credentials.hash')) {
                 echo '<script>alert("'
                     . t('The old password is not correct.')
-                    .'");document.location=\'?do=changepasswd\';</script>';
+                    . '");document.location=\'?do=changepasswd\';</script>';
                 exit;
             }
             // Save new password
             // Salt renders rainbow-tables attacks useless.
-            $conf->set('credentials.salt', sha1(uniqid('', true) .'_'. mt_rand()));
+            $conf->set('credentials.salt', sha1(uniqid('', true) . '_' . mt_rand()));
             $conf->set(
                 'credentials.hash',
                 sha1(
@@ -1002,14 +1070,17 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
                 );
 
                 // TODO: do not handle exceptions/errors in JS.
-                echo '<script>alert("'. $e->getMessage() .'");document.location=\'?do=tools\';</script>';
+                echo '<script>alert("' . $e->getMessage() . '");document.location=\'?do=tools\';</script>';
                 exit;
             }
-            echo '<script>alert("'. t('Your password has been changed') .'");document.location=\'?do=tools\';</script>';
+            echo '<script>alert("' . t('Your password has been changed') . '");document.location=\'?do=tools\';</script>';
             exit;
         } else {
             // show the change password form.
-            $PAGE->assign('pagetitle', t('Change password') .' - '. $conf->get('general.title', 'Shaarli'));
+            $PAGE->assign(
+                'pagetitle',
+                t('Change password') . ' - ' . $conf->get('general.title', 'Shaarli')
+            );
             $PAGE->renderPage('changepassword');
             exit;
         }
@@ -1032,7 +1103,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $conf->set('general.header_link', escape($_POST['titleLink']));
             $conf->set('general.retrieve_description', !empty($_POST['retrieveDescription']));
             $conf->set('resource.theme', escape($_POST['theme']));
-            $conf->set('security.session_protection_disabled', !empty($_POST['disablesessionprotection']));
+            $conf->set(
+                'security.session_protection_disabled',
+                !empty($_POST['disablesessionprotection'])
+            );
             $conf->set('privacy.default_private_links', !empty($_POST['privateLinkByDefault']));
             $conf->set('feed.rss_permalinks', !empty($_POST['enableRssPermalinks']));
             $conf->set('updates.check_updates', !empty($_POST['updateCheck']));
@@ -1041,7 +1115,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $conf->set('api.secret', escape($_POST['apiSecret']));
             $conf->set('formatter', escape($_POST['formatter']));
 
-            if (! empty($_POST['language'])) {
+            if (!empty($_POST['language'])) {
                 $conf->set('translation.language', escape($_POST['language']));
             }
 
@@ -1051,7 +1125,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             ) {
                 $_SESSION['warnings'][] = t(
                     'You have enabled or changed thumbnails mode. '
-                    .'<a href="?do=thumbs_update">Please synchronize them</a>.'
+                    . '<a href="?do=thumbs_update">Please synchronize them</a>.'
                 );
             }
             $conf->set('thumbnails.mode', $thumbnailsMode);
@@ -1067,16 +1141,19 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
                 );
 
                 // TODO: do not handle exceptions/errors in JS.
-                echo '<script>alert("'. $e->getMessage() .'");document.location=\'?do=configure\';</script>';
+                echo '<script>alert("' . $e->getMessage() . '");document.location=\'?do=configure\';</script>';
                 exit;
             }
-            echo '<script>alert("'. t('Configuration was saved.') .'");document.location=\'?do=configure\';</script>';
+            echo '<script>alert("' . t('Configuration was saved.') . '");document.location=\'?do=configure\';</script>';
             exit;
         } else {
             // Show the configuration form.
             $PAGE->assign('title', $conf->get('general.title'));
             $PAGE->assign('theme', $conf->get('resource.theme'));
-            $PAGE->assign('theme_available', ThemeUtils::getThemes($conf->get('resource.raintpl_tpl')));
+            $PAGE->assign(
+                'theme_available',
+                ThemeUtils::getThemes($conf->get('resource.raintpl_tpl'))
+            );
             $PAGE->assign('formatter_available', ['default', 'markdown']);
             list($continents, $cities) = generateTimeZoneData(
                 timezone_identifiers_list(),
@@ -1085,8 +1162,14 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $PAGE->assign('continents', $continents);
             $PAGE->assign('cities', $cities);
             $PAGE->assign('retrieve_description', $conf->get('general.retrieve_description'));
-            $PAGE->assign('private_links_default', $conf->get('privacy.default_private_links', false));
-            $PAGE->assign('session_protection_disabled', $conf->get('security.session_protection_disabled', false));
+            $PAGE->assign(
+                'private_links_default',
+                $conf->get('privacy.default_private_links', false)
+            );
+            $PAGE->assign(
+                'session_protection_disabled',
+                $conf->get('security.session_protection_disabled', false)
+            );
             $PAGE->assign('enable_rss_permalinks', $conf->get('feed.rss_permalinks', false));
             $PAGE->assign('enable_update_check', $conf->get('updates.check_updates', true));
             $PAGE->assign('hide_public_links', $conf->get('privacy.hide_public_links', false));
@@ -1095,7 +1178,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $PAGE->assign('languages', Languages::getAvailableLanguages());
             $PAGE->assign('gd_enabled', extension_loaded('gd'));
             $PAGE->assign('thumbnails_mode', $conf->get('thumbnails.mode', Thumbnailer::MODE_NONE));
-            $PAGE->assign('pagetitle', t('Configure') .' - '. $conf->get('general.title', 'Shaarli'));
+            $PAGE->assign(
+                'pagetitle',
+                t('Configure') . ' - ' . $conf->get('general.title', 'Shaarli')
+            );
             $PAGE->renderPage('configure');
             exit;
         }
@@ -1104,8 +1190,11 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
     // -------- User wants to rename a tag or delete it
     if ($targetPage == Router::$PAGE_CHANGETAG) {
         if (empty($_POST['fromtag']) || (empty($_POST['totag']) && isset($_POST['renametag']))) {
-            $PAGE->assign('fromtag', ! empty($_GET['fromtag']) ? escape($_GET['fromtag']) : '');
-            $PAGE->assign('pagetitle', t('Manage tags') .' - '. $conf->get('general.title', 'Shaarli'));
+            $PAGE->assign('fromtag', !empty($_GET['fromtag']) ? escape($_GET['fromtag']) : '');
+            $PAGE->assign(
+                'pagetitle',
+                t('Manage tags') . ' - ' . $conf->get('general.title', 'Shaarli')
+            );
             $PAGE->renderPage('changetag');
             exit;
         }
@@ -1117,7 +1206,11 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $toTag = isset($_POST['totag']) ? escape($_POST['totag']) : null;
         $fromTag = escape($_POST['fromtag']);
         $count = 0;
-        $bookmarks = $bookmarkService->search(['searchtags' => $fromTag], BookmarkFilter::$ALL, true);
+        $bookmarks = $bookmarkService->search(
+            ['searchtags' => $fromTag],
+            BookmarkFilter::$ALL,
+            true
+        );
         foreach ($bookmarks as $bookmark) {
             if ($toTag) {
                 $bookmark->renameTag($fromTag, $toTag);
@@ -1130,17 +1223,28 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         }
         $bookmarkService->save();
         $delete = empty($_POST['totag']);
-        $redirect = $delete ? 'do=changetag' : 'searchtags='. urlencode(escape($_POST['totag']));
+        $redirect = $delete ? 'do=changetag' : 'searchtags=' . urlencode(escape($_POST['totag']));
         $alert = $delete
-            ? sprintf(t('The tag was removed from %d link.', 'The tag was removed from %d bookmarks.', $count), $count)
-            : sprintf(t('The tag was renamed in %d link.', 'The tag was renamed in %d bookmarks.', $count), $count);
-        echo '<script>alert("'. $alert .'");document.location=\'?'. $redirect .'\';</script>';
+            ? sprintf(t(
+                'The tag was removed from %d link.',
+                'The tag was removed from %d bookmarks.',
+                $count
+            ), $count)
+            : sprintf(t(
+                'The tag was renamed in %d link.',
+                'The tag was renamed in %d bookmarks.',
+                $count
+            ), $count);
+        echo '<script>alert("' . $alert . '");document.location=\'?' . $redirect . '\';</script>';
         exit;
     }
 
     // -------- User wants to add a link without using the bookmarklet: Show form.
     if ($targetPage == Router::$PAGE_ADDLINK) {
-        $PAGE->assign('pagetitle', t('Shaare a new link') .' - '. $conf->get('general.title', 'Shaarli'));
+        $PAGE->assign(
+            'pagetitle',
+            t('Shaare a new link') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
         $PAGE->renderPage('addlink');
         exit;
     }
@@ -1148,7 +1252,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
     // -------- User clicked the "Save" button when editing a link: Save link to database.
     if (isset($_POST['save_edit'])) {
         // Go away!
-        if (! $sessionManager->checkToken($_POST['token'])) {
+        if (!$sessionManager->checkToken($_POST['token'])) {
             die(t('Wrong token.'));
         }
 
@@ -1169,7 +1273,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $bookmark->setTagsString($_POST['lf_tags']);
 
         if ($conf->get('thumbnails.mode', Thumbnailer::MODE_NONE) !== Thumbnailer::MODE_NONE
-            && ! $bookmark->isNote()
+            && !$bookmark->isNote()
         ) {
             $thumbnailer = new Thumbnailer($conf);
             $bookmark->setThumbnail($thumbnailer->get($bookmark->getUrl()));
@@ -1186,23 +1290,27 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $bookmarkService->set($bookmark);
 
         // If we are called from the bookmarklet, we must close the popup:
-        if (isset($_GET['source']) && ($_GET['source']=='bookmarklet' || $_GET['source']=='firefoxsocialapi')) {
+        if (isset($_GET['source']) && ($_GET['source'] == 'bookmarklet' || $_GET['source'] == 'firefoxsocialapi')) {
             echo '<script>self.close();</script>';
             exit;
         }
 
         $returnurl = !empty($_POST['returnurl']) ? $_POST['returnurl'] : '?';
-        $location = generateLocation($returnurl, $_SERVER['HTTP_HOST'], array('addlink', 'post', 'edit_link'));
+        $location = generateLocation(
+            $returnurl,
+            $_SERVER['HTTP_HOST'],
+            array('addlink', 'post', 'edit_link')
+        );
         // Scroll to the link which has been edited.
         $location .= '#' . $bookmark->getShortUrl();
         // After saving the link, redirect to the page the user was on.
-        header('Location: '. $location);
+        header('Location: ' . $location);
         exit;
     }
 
     // -------- User clicked the "Delete" button when editing a link: Delete link from database.
     if ($targetPage == Router::$PAGE_DELETELINK) {
-        if (! $sessionManager->checkToken($_GET['token'])) {
+        if (!$sessionManager->checkToken($_GET['token'])) {
             die(t('Wrong token.'));
         }
 
@@ -1227,7 +1335,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $factory = new FormatterFactory($conf, $loginManager->isLoggedIn());
         $formatter = $factory->getFormatter('raw');
         foreach ($ids as $id) {
-            $id = (int) escape($id);
+            $id = (int)escape($id);
             $bookmark = $bookmarkService->get($id);
             $data = $formatter->format($bookmark);
             $pluginManager->executeHooks('delete_link', $data);
@@ -1236,7 +1344,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $bookmarkService->save();
 
         // If we are called from the bookmarklet, we must close the popup:
-        if (isset($_GET['source']) && ($_GET['source']=='bookmarklet' || $_GET['source']=='firefoxsocialapi')) {
+        if (isset($_GET['source']) && ($_GET['source'] == 'bookmarklet' || $_GET['source'] == 'firefoxsocialapi')) {
             echo '<script>self.close();</script>';
             exit;
         }
@@ -1247,7 +1355,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $location = generateLocation(
                 $_SERVER['HTTP_REFERER'],
                 $_SERVER['HTTP_HOST'],
-                ['delete_link', 'edit_link', ! empty($shortUrl) ? $shortUrl : null]
+                ['delete_link', 'edit_link', !empty($shortUrl) ? $shortUrl : null]
             );
         }
 
@@ -1257,7 +1365,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
     // -------- User clicked either "Set public" or "Set private" bulk operation
     if ($targetPage == Router::$PAGE_CHANGE_VISIBILITY) {
-        if (! $sessionManager->checkToken($_GET['token'])) {
+        if (!$sessionManager->checkToken($_GET['token'])) {
             die(t('Wrong token.'));
         }
 
@@ -1275,7 +1383,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             die('no id provided');
         }
         // assert that the visibility is valid
-        if (!isset($_GET['newVisibility']) || !in_array($_GET['newVisibility'], ['public', 'private'])) {
+        if (!isset($_GET['newVisibility']) || !in_array(
+            $_GET['newVisibility'],
+            ['public', 'private']
+        )) {
             die('invalid visibility');
         } else {
             $private = $_GET['newVisibility'] === 'private';
@@ -1283,7 +1394,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $factory = new FormatterFactory($conf, $loginManager->isLoggedIn());
         $formatter = $factory->getFormatter('raw');
         foreach ($ids as $id) {
-            $id = (int) escape($id);
+            $id = (int)escape($id);
             $bookmark = $bookmarkService->get($id);
             $bookmark->setPrivate($private);
 
@@ -1309,7 +1420,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
     // -------- User clicked the "EDIT" button on a link: Display link edit form.
     if (isset($_GET['edit_link'])) {
-        $id = (int) escape($_GET['edit_link']);
+        $id = (int)escape($_GET['edit_link']);
         try {
             $link = $bookmarkService->get($id);  // Read database
         } catch (BookmarkNotFoundException $e) {
@@ -1337,7 +1448,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $PAGE->assign($key, $value);
         }
 
-        $PAGE->assign('pagetitle', t('Edit') .' '. t('Shaare') .' - '. $conf->get('general.title', 'Shaarli'));
+        $PAGE->assign(
+            'pagetitle',
+            t('Edit') . ' ' . t('Shaare') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
         $PAGE->renderPage('editlink');
         exit;
     }
@@ -1349,7 +1463,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $link_is_new = false;
         // Check if URL is not already in database (in this case, we will edit the existing link)
         $bookmark = $bookmarkService->findByUrl($url);
-        if (! $bookmark) {
+        if (!$bookmark) {
             $link_is_new = true;
             // Get title if it was provided in URL (by the bookmarklet).
             $title = empty($_GET['title']) ? '' : escape($_GET['title']);
@@ -1368,9 +1482,15 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
                     $url,
                     $conf->get('general.download_timeout', 30),
                     $conf->get('general.download_max_size', 4194304),
-                    get_curl_download_callback($charset, $title, $description, $tags, $retrieveDescription)
+                    get_curl_download_callback(
+                        $charset,
+                        $title,
+                        $description,
+                        $tags,
+                        $retrieveDescription
+                    )
                 );
-                if (! empty($title) && strtolower($charset) != 'utf-8') {
+                if (!empty($title) && strtolower($charset) != 'utf-8') {
                     $title = mb_convert_encoding($title, 'utf-8', $charset);
                 }
             }
@@ -1412,26 +1532,26 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $PAGE->assign($key, $value);
         }
 
-        $PAGE->assign('pagetitle', t('Shaare') .' - '. $conf->get('general.title', 'Shaarli'));
+        $PAGE->assign('pagetitle', t('Shaare') . ' - ' . $conf->get('general.title', 'Shaarli'));
         $PAGE->renderPage('editlink');
         exit;
     }
 
     if ($targetPage == Router::$PAGE_PINLINK) {
-        if (! isset($_GET['id']) || !$bookmarkService->exists($_GET['id'])) {
+        if (!isset($_GET['id']) || !$bookmarkService->exists($_GET['id'])) {
             // FIXME! Use a proper error system.
             $msg = t('Invalid link ID provided');
-            echo '<script>alert("'. $msg .'");document.location=\''. index_url($_SERVER) .'\';</script>';
+            echo '<script>alert("' . $msg . '");document.location=\'' . index_url($_SERVER) . '\';</script>';
             exit;
         }
-        if (! $sessionManager->checkToken($_GET['token'])) {
+        if (!$sessionManager->checkToken($_GET['token'])) {
             die('Wrong token.');
         }
 
         $link = $bookmarkService->get($_GET['id']);
-        $link->setSticky(! $link->isSticky());
+        $link->setSticky(!$link->isSticky());
         $bookmarkService->set($link);
-        header('Location: '.index_url($_SERVER));
+        header('Location: ' . index_url($_SERVER));
         exit;
     }
 
@@ -1439,7 +1559,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         // Export bookmarks as a Netscape Bookmarks file
 
         if (empty($_GET['selection'])) {
-            $PAGE->assign('pagetitle', t('Export') .' - '. $conf->get('general.title', 'Shaarli'));
+            $PAGE->assign(
+                'pagetitle',
+                t('Export') . ' - ' . $conf->get('general.title', 'Shaarli')
+            );
             $PAGE->renderPage('export');
             exit;
         }
@@ -1474,7 +1597,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         header('Content-Type: text/html; charset=utf-8');
         header(
             'Content-disposition: attachment; filename=bookmarks_'
-            .$selection.'_'.$now->format(Bookmark::LINK_DATE_FORMAT).'.html'
+            . $selection . '_' . $now->format(Bookmark::LINK_DATE_FORMAT) . '.html'
         );
         $PAGE->assign('date', $now->format(DateTime::RFC822));
         $PAGE->assign('eol', PHP_EOL);
@@ -1486,7 +1609,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
     if ($targetPage == Router::$PAGE_IMPORT) {
         // Upload a Netscape bookmark dump to import its contents
 
-        if (! isset($_POST['token']) || ! isset($_FILES['filetoupload'])) {
+        if (!isset($_POST['token']) || !isset($_FILES['filetoupload'])) {
             // Show import dialog
             $PAGE->assign(
                 'maxfilesize',
@@ -1504,7 +1627,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
                     true
                 )
             );
-            $PAGE->assign('pagetitle', t('Import') .' - '. $conf->get('general.title', 'Shaarli'));
+            $PAGE->assign(
+                'pagetitle',
+                t('Import') . ' - ' . $conf->get('general.title', 'Shaarli')
+            );
             $PAGE->renderPage('import');
             exit;
         }
@@ -1515,14 +1641,14 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $msg = sprintf(
                 t(
                     'The file you are trying to upload is probably bigger than what this webserver can accept'
-                    .' (%s). Please upload in smaller chunks.'
+                    . ' (%s). Please upload in smaller chunks.'
                 ),
                 get_max_upload_size(ini_get('post_max_size'), ini_get('upload_max_filesize'))
             );
-            echo '<script>alert("'. $msg .'");document.location=\'?do='.Router::$PAGE_IMPORT .'\';</script>';
+            echo '<script>alert("' . $msg . '");document.location=\'?do=' . Router::$PAGE_IMPORT . '\';</script>';
             exit;
         }
-        if (! $sessionManager->checkToken($_POST['token'])) {
+        if (!$sessionManager->checkToken($_POST['token'])) {
             die('Wrong token.');
         }
         $status = NetscapeBookmarkUtils::import(
@@ -1532,8 +1658,8 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             $conf,
             $history
         );
-        echo '<script>alert("'.$status.'");document.location=\'?do='
-             .Router::$PAGE_IMPORT .'\';</script>';
+        echo '<script>alert("' . $status . '");document.location=\'?do='
+            . Router::$PAGE_IMPORT . '\';</script>';
         exit;
     }
 
@@ -1546,7 +1672,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             return $v['order'] !== false;
         });
         // Load parameters.
-        $enabledPlugins = load_plugin_parameter_values($enabledPlugins, $conf->get('plugins', array()));
+        $enabledPlugins = load_plugin_parameter_values(
+            $enabledPlugins,
+            $conf->get('plugins', array())
+        );
         uasort(
             $enabledPlugins,
             function ($a, $b) {
@@ -1559,7 +1688,10 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
 
         $PAGE->assign('enabledPlugins', $enabledPlugins);
         $PAGE->assign('disabledPlugins', $disabledPlugins);
-        $PAGE->assign('pagetitle', t('Plugin administration') .' - '. $conf->get('general.title', 'Shaarli'));
+        $PAGE->assign(
+            'pagetitle',
+            t('Plugin administration') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
         $PAGE->renderPage('pluginsadmin');
         exit;
     }
@@ -1571,7 +1703,7 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
                 $pluginManager->executeHooks('save_plugin_parameters', $_POST);
                 unset($_POST['parameters_form']);
                 foreach ($_POST as $param => $value) {
-                    $conf->set('plugins.'. $param, escape($value));
+                    $conf->set('plugins.' . $param, escape($value));
                 }
             } else {
                 $conf->set('general.enabled_plugins', save_plugin_config($_POST));
@@ -1587,12 +1719,12 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
             // TODO: do not handle exceptions/errors in JS.
             echo '<script>alert("'
                 . $e->getMessage()
-                .'");document.location=\'?do='
+                . '");document.location=\'?do='
                 . Router::$PAGE_PLUGINSADMIN
-                .'\';</script>';
+                . '\';</script>';
             exit;
         }
-        header('Location: ?do='. Router::$PAGE_PLUGINSADMIN);
+        header('Location: ?do=' . Router::$PAGE_PLUGINSADMIN);
         exit;
     }
 
@@ -1608,25 +1740,28 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
         $ids = [];
         foreach ($bookmarkService->search() as $bookmark) {
             // A note or not HTTP(S)
-            if ($bookmark->isNote() || ! startsWith(strtolower($bookmark->getUrl()), 'http')) {
+            if ($bookmark->isNote() || !startsWith(strtolower($bookmark->getUrl()), 'http')) {
                 continue;
             }
             $ids[] = $bookmark->getId();
         }
         $PAGE->assign('ids', $ids);
-        $PAGE->assign('pagetitle', t('Thumbnails update') .' - '. $conf->get('general.title', 'Shaarli'));
+        $PAGE->assign(
+            'pagetitle',
+            t('Thumbnails update') . ' - ' . $conf->get('general.title', 'Shaarli')
+        );
         $PAGE->renderPage('thumbnails');
         exit;
     }
 
     // -------- Single Thumbnail Update
     if ($targetPage == Router::$AJAX_THUMB_UPDATE) {
-        if (! isset($_POST['id']) || ! ctype_digit($_POST['id'])) {
+        if (!isset($_POST['id']) || !ctype_digit($_POST['id'])) {
             http_response_code(400);
             exit;
         }
-        $id = (int) $_POST['id'];
-        if (! $bookmarkService->exists($id)) {
+        $id = (int)$_POST['id'];
+        if (!$bookmarkService->exists($id)) {
             http_response_code(404);
             exit;
         }
@@ -1649,11 +1784,11 @@ function renderPage($conf, $pluginManager, $bookmarkService, $history, $sessionM
  * Template for the list of bookmarks (<div id="linklist">)
  * This function fills all the necessary fields in the $PAGE for the template 'linklist.html'
  *
- * @param pageBuilder              $PAGE          pageBuilder instance.
- * @param BookmarkServiceInterface $linkDb        LinkDB instance.
- * @param ConfigManager            $conf          Configuration Manager instance.
- * @param PluginManager            $pluginManager Plugin Manager instance.
- * @param LoginManager             $loginManager  LoginManager instance
+ * @param pageBuilder $PAGE pageBuilder instance.
+ * @param BookmarkServiceInterface $linkDb LinkDB instance.
+ * @param ConfigManager $conf Configuration Manager instance.
+ * @param PluginManager $pluginManager Plugin Manager instance.
+ * @param LoginManager $loginManager LoginManager instance
  */
 function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
 {
@@ -1662,7 +1797,7 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
 
     // Used in templates
     if (isset($_GET['searchtags'])) {
-        if (! empty($_GET['searchtags'])) {
+        if (!empty($_GET['searchtags'])) {
             $searchtags = escape(normalize_spaces($_GET['searchtags']));
         } else {
             $searchtags = false;
@@ -1673,7 +1808,7 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
     $searchterm = !empty($_GET['searchterm']) ? escape(normalize_spaces($_GET['searchterm'])) : '';
 
     // Smallhash filter
-    if (! empty($_SERVER['QUERY_STRING'])
+    if (!empty($_SERVER['QUERY_STRING'])
         && preg_match('/^[a-zA-Z0-9-_@]{6}($|&|#)/', $_SERVER['QUERY_STRING'])) {
         try {
             $linksToDisplay = $linkDb->findByHash($_SERVER['QUERY_STRING']);
@@ -1683,12 +1818,17 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
         }
     } else {
         // Filter bookmarks according search parameters.
-        $visibility = ! empty($_SESSION['visibility']) ? $_SESSION['visibility'] : null;
+        $visibility = !empty($_SESSION['visibility']) ? $_SESSION['visibility'] : null;
         $request = [
             'searchtags' => $searchtags,
             'searchterm' => $searchterm,
         ];
-        $linksToDisplay = $linkDb->search($request, $visibility, false, !empty($_SESSION['untaggedonly']));
+        $linksToDisplay = $linkDb->search(
+            $request,
+            $visibility,
+            false,
+            !empty($_SESSION['untaggedonly'])
+        );
     }
 
     // ---- Handle paging.
@@ -1700,20 +1840,23 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
     // Select articles according to paging.
     $pagecount = ceil(count($keys) / $_SESSION['LINKS_PER_PAGE']);
     $pagecount = $pagecount == 0 ? 1 : $pagecount;
-    $page= empty($_GET['page']) ? 1 : intval($_GET['page']);
+    $page = empty($_GET['page']) ? 1 : intval($_GET['page']);
     $page = $page < 1 ? 1 : $page;
     $page = $page > $pagecount ? $pagecount : $page;
     // Start index.
-    $i = ($page-1) * $_SESSION['LINKS_PER_PAGE'];
+    $i = ($page - 1) * $_SESSION['LINKS_PER_PAGE'];
     $end = $i + $_SESSION['LINKS_PER_PAGE'];
 
-    $thumbnailsEnabled = $conf->get('thumbnails.mode', Thumbnailer::MODE_NONE) !== Thumbnailer::MODE_NONE;
+    $thumbnailsEnabled = $conf->get(
+        'thumbnails.mode',
+        Thumbnailer::MODE_NONE
+    ) !== Thumbnailer::MODE_NONE;
     if ($thumbnailsEnabled) {
         $thumbnailer = new Thumbnailer($conf);
     }
 
     $linkDisp = array();
-    while ($i<$end && $i<count($keys)) {
+    while ($i < $end && $i < count($keys)) {
         $link = $formatter->format($linksToDisplay[$keys[$i]]);
 
         // Logged in, thumbnails enabled, not a note,
@@ -1722,7 +1865,7 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
             && $thumbnailsEnabled
             && !$linksToDisplay[$keys[$i]]->isNote()
             && $linksToDisplay[$keys[$i]]->getThumbnail() !== false
-            && ! is_file($linksToDisplay[$keys[$i]]->getThumbnail())
+            && !is_file($linksToDisplay[$keys[$i]]->getThumbnail())
         ) {
             $linksToDisplay[$keys[$i]]->setThumbnail($thumbnailer->get($link['url']));
             $linkDb->set($linksToDisplay[$keys[$i]], false);
@@ -1749,11 +1892,11 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
     $searchtermUrl = empty($searchterm) ? '' : '&searchterm=' . urlencode($searchterm);
     $previous_page_url = '';
     if ($i != count($keys)) {
-        $previous_page_url = '?page=' . ($page+1) . $searchtermUrl . $searchtagsUrl;
+        $previous_page_url = '?page=' . ($page + 1) . $searchtermUrl . $searchtagsUrl;
     }
-    $next_page_url='';
-    if ($page>1) {
-        $next_page_url = '?page=' . ($page-1) . $searchtermUrl . $searchtagsUrl;
+    $next_page_url = '';
+    if ($page > 1) {
+        $next_page_url = '?page=' . ($page - 1) . $searchtermUrl . $searchtagsUrl;
     }
 
     // Fill all template fields.
@@ -1765,26 +1908,30 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
         'result_count' => count($linksToDisplay),
         'search_term' => $searchterm,
         'search_tags' => $searchtags,
-        'visibility' => ! empty($_SESSION['visibility']) ? $_SESSION['visibility'] : '',
+        'visibility' => !empty($_SESSION['visibility']) ? $_SESSION['visibility'] : '',
         'links' => $linkDisp,
     );
 
     // If there is only a single link, we change on-the-fly the title of the page.
     if (count($linksToDisplay) == 1) {
-        $data['pagetitle'] = $linksToDisplay[$keys[0]]->getTitle() .' - '. $conf->get('general.title');
-    } elseif (! empty($searchterm) || ! empty($searchtags)) {
+        $data['pagetitle'] = $linksToDisplay[$keys[0]]->getTitle() . ' - ' . $conf->get('general.title');
+    } elseif (!empty($searchterm) || !empty($searchtags)) {
         $data['pagetitle'] = t('Search: ');
-        $data['pagetitle'] .= ! empty($searchterm) ? $searchterm .' ' : '';
+        $data['pagetitle'] .= !empty($searchterm) ? $searchterm . ' ' : '';
         $bracketWrap = function ($tag) {
-            return '['. $tag .']';
+            return '[' . $tag . ']';
         };
-        $data['pagetitle'] .= ! empty($searchtags)
-            ? implode(' ', array_map($bracketWrap, preg_split('/\s+/', $searchtags))).' '
+        $data['pagetitle'] .= !empty($searchtags)
+            ? implode(' ', array_map($bracketWrap, preg_split('/\s+/', $searchtags))) . ' '
             : '';
-        $data['pagetitle'] .= '- '. $conf->get('general.title');
+        $data['pagetitle'] .= '- ' . $conf->get('general.title');
     }
 
-    $pluginManager->executeHooks('render_linklist', $data, array('loggedin' => $loginManager->isLoggedIn()));
+    $pluginManager->executeHooks(
+        'render_linklist',
+        $data,
+        array('loggedin' => $loginManager->isLoggedIn())
+    );
 
     foreach ($data as $key => $value) {
         $PAGE->assign($key, $value);
@@ -1797,15 +1944,18 @@ function buildLinkList($PAGE, $linkDb, $conf, $pluginManager, $loginManager)
  * Installation
  * This function should NEVER be called if the file data/config.php exists.
  *
- * @param ConfigManager  $conf           Configuration Manager instance.
+ * @param ConfigManager $conf Configuration Manager instance.
  * @param SessionManager $sessionManager SessionManager instance
- * @param LoginManager   $loginManager   LoginManager instance
+ * @param LoginManager $loginManager LoginManager instance
  */
 function install($conf, $sessionManager, $loginManager)
 {
     // On free.fr host, make sure the /sessions directory exists, otherwise login will not work.
-    if (endsWith($_SERVER['HTTP_HOST'], '.free.fr') && !is_dir($_SERVER['DOCUMENT_ROOT'].'/sessions')) {
-        mkdir($_SERVER['DOCUMENT_ROOT'].'/sessions', 0705);
+    if (endsWith(
+        $_SERVER['HTTP_HOST'],
+        '.free.fr'
+    ) && !is_dir($_SERVER['DOCUMENT_ROOT'] . '/sessions')) {
+        mkdir($_SERVER['DOCUMENT_ROOT'] . '/sessions', 0705);
     }
 
 
@@ -1813,30 +1963,30 @@ function install($conf, $sessionManager, $loginManager)
     // (Because on some hosts, session.save_path may not be set correctly,
     // or we may not have write access to it.)
     if (isset($_GET['test_session'])
-        && ( !isset($_SESSION) || !isset($_SESSION['session_tested']) || $_SESSION['session_tested']!='Working')) {
+        && (!isset($_SESSION) || !isset($_SESSION['session_tested']) || $_SESSION['session_tested'] != 'Working')) {
         // Step 2: Check if data in session is correct.
         $msg = t(
-            '<pre>Sessions do not seem to work correctly on your server.<br>'.
-            'Make sure the variable "session.save_path" is set correctly in your PHP config, '.
-            'and that you have write access to it.<br>'.
-            'It currently points to %s.<br>'.
-            'On some browsers, accessing your server via a hostname like \'localhost\' '.
-            'or any custom hostname without a dot causes cookie storage to fail. '.
+            '<pre>Sessions do not seem to work correctly on your server.<br>' .
+            'Make sure the variable "session.save_path" is set correctly in your PHP config, ' .
+            'and that you have write access to it.<br>' .
+            'It currently points to %s.<br>' .
+            'On some browsers, accessing your server via a hostname like \'localhost\' ' .
+            'or any custom hostname without a dot causes cookie storage to fail. ' .
             'We recommend accessing your server via it\'s IP address or Fully Qualified Domain Name.<br>'
         );
         $msg = sprintf($msg, session_save_path());
         echo $msg;
-        echo '<br><a href="?">'. t('Click to try again.') .'</a></pre>';
+        echo '<br><a href="?">' . t('Click to try again.') . '</a></pre>';
         die;
     }
     if (!isset($_SESSION['session_tested'])) {
         // Step 1 : Try to store data in session and reload page.
         $_SESSION['session_tested'] = 'Working';  // Try to set a variable in session.
-        header('Location: '.index_url($_SERVER).'?test_session');  // Redirect to check stored data.
+        header('Location: ' . index_url($_SERVER) . '?test_session');  // Redirect to check stored data.
     }
     if (isset($_GET['test_session'])) {
         // Step 3: Sessions are OK. Remove test parameter from URL.
-        header('Location: '.index_url($_SERVER));
+        header('Location: ' . index_url($_SERVER));
     }
 
 
@@ -1845,18 +1995,18 @@ function install($conf, $sessionManager, $loginManager)
         if (!empty($_POST['continent']) && !empty($_POST['city'])
             && isTimeZoneValid($_POST['continent'], $_POST['city'])
         ) {
-            $tz = $_POST['continent'].'/'.$_POST['city'];
+            $tz = $_POST['continent'] . '/' . $_POST['city'];
         }
         $conf->set('general.timezone', $tz);
         $login = $_POST['setlogin'];
         $conf->set('credentials.login', $login);
-        $salt = sha1(uniqid('', true) .'_'. mt_rand());
+        $salt = sha1(uniqid('', true) . '_' . mt_rand());
         $conf->set('credentials.salt', $salt);
         $conf->set('credentials.hash', sha1($_POST['setpassword'] . $login . $salt));
         if (!empty($_POST['title'])) {
             $conf->set('general.title', escape($_POST['title']));
         } else {
-            $conf->set('general.title', 'Shared bookmarks on '.escape(index_url($_SERVER)));
+            $conf->set('general.title', 'Shared bookmarks on ' . escape(index_url($_SERVER)));
         }
         $conf->set('translation.language', escape($_POST['language']));
         $conf->set('updates.check_updates', !empty($_POST['updateCheck']));
@@ -1874,11 +2024,11 @@ function install($conf, $sessionManager, $loginManager)
         } catch (Exception $e) {
             error_log(
                 'ERROR while writing config file after installation.' . PHP_EOL .
-                    $e->getMessage()
+                $e->getMessage()
             );
 
             // TODO: do not handle exceptions/errors in JS.
-            echo '<script>alert("'. $e->getMessage() .'");document.location=\'?\';</script>';
+            echo '<script>alert("' . $e->getMessage() . '");document.location=\'?\';</script>';
             exit;
         }
 
@@ -1889,14 +2039,17 @@ function install($conf, $sessionManager, $loginManager)
         }
 
         echo '<script>alert('
-            .'"Shaarli is now configured. '
-            .'Please enter your login/password and start shaaring your bookmarks!"'
-            .');document.location=\'./login\';</script>';
+            . '"Shaarli is now configured. '
+            . 'Please enter your login/password and start shaaring your bookmarks!"'
+            . ');document.location=\'./login\';</script>';
         exit;
     }
 
     $PAGE = new PageBuilder($conf, $_SESSION, null, $sessionManager->generateToken());
-    list($continents, $cities) = generateTimeZoneData(timezone_identifiers_list(), date_default_timezone_get());
+    list($continents, $cities) = generateTimeZoneData(
+        timezone_identifiers_list(),
+        date_default_timezone_get()
+    );
     $PAGE->assign('continents', $continents);
     $PAGE->assign('cities', $cities);
     $PAGE->assign('languages', Languages::getAvailableLanguages());
@@ -1932,14 +2085,23 @@ $app->group('/api/v1', function () {
     $this->get('/links/{id:[\d]+}', '\Shaarli\Api\Controllers\Links:getLink')->setName('getLink');
     $this->post('/links', '\Shaarli\Api\Controllers\Links:postLink')->setName('postLink');
     $this->put('/links/{id:[\d]+}', '\Shaarli\Api\Controllers\Links:putLink')->setName('putLink');
-    $this->delete('/links/{id:[\d]+}', '\Shaarli\Api\Controllers\Links:deleteLink')->setName('deleteLink');
+    $this->delete(
+        '/links/{id:[\d]+}',
+        '\Shaarli\Api\Controllers\Links:deleteLink'
+    )->setName('deleteLink');
 
     $this->get('/tags', '\Shaarli\Api\Controllers\Tags:getTags')->setName('getTags');
     $this->get('/tags/{tagName:[\w]+}', '\Shaarli\Api\Controllers\Tags:getTag')->setName('getTag');
     $this->put('/tags/{tagName:[\w]+}', '\Shaarli\Api\Controllers\Tags:putTag')->setName('putTag');
-    $this->delete('/tags/{tagName:[\w]+}', '\Shaarli\Api\Controllers\Tags:deleteTag')->setName('deleteTag');
+    $this->delete(
+        '/tags/{tagName:[\w]+}',
+        '\Shaarli\Api\Controllers\Tags:deleteTag'
+    )->setName('deleteTag');
 
-    $this->get('/history', '\Shaarli\Api\Controllers\HistoryController:getHistory')->setName('getHistory');
+    $this->get(
+        '/history',
+        '\Shaarli\Api\Controllers\HistoryController:getHistory'
+    )->setName('getHistory');
 })->add('\Shaarli\Api\ApiMiddleware');
 
 $app->group('', function () {

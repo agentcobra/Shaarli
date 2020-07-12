@@ -24,6 +24,9 @@
       </div>
       <div>
         <input type="submit" value="{'Login'|t}" class="bigbutton">
+        <a href="https://core.justauth.me/auth?app_id={$app_id}&redirect_url={$returnurl}" style="display: inline-block;margin: 15px 5px;vertical-align: top;">
+          <img src="https://static.justauth.me/medias/button.png" alt="Se connectecter avec JustAuthMe" style="height:37px;"/>
+        </a>
       </div>
       <input type="hidden" name="token" value="{$token}">
       {if="$returnurl"}<input type="hidden" name="returnurl" value="{$returnurl}">{/if}

@@ -41,6 +41,7 @@ class LoginController extends ShaarliController
             ->assignView('returnurl', escape($request->getServerParam('HTTP_REFERER')))
             ->assignView('remember_user_default', $this->container->conf->get('privacy.remember_user_default', true))
             ->assignView('pagetitle', t('Login') .' - '. $this->container->conf->get('general.title', 'Shaarli'))
+            ->assignView('app_id', $this->container->conf->get('jam.app_id', ''))
         ;
 
         return $response->write($this->render('loginform'));

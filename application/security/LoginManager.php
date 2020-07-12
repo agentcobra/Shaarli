@@ -1,7 +1,9 @@
 <?php
+
 namespace Shaarli\Security;
 
 use Exception;
+use JustAuthMe\SDK\JamSdk;
 use Shaarli\Config\ConfigManager;
 
 /**
@@ -9,25 +11,25 @@ use Shaarli\Config\ConfigManager;
  */
 class LoginManager
 {
-    /** @var string Name of the cookie set after logging in **/
+    /** @var string Name of the cookie set after logging in * */
     public static $STAY_SIGNED_IN_COOKIE = 'shaarli_staySignedIn';
 
     /** @var array A reference to the $_GLOBALS array */
     protected $globals = [];
 
-    /** @var ConfigManager Configuration Manager instance **/
+    /** @var ConfigManager Configuration Manager instance * */
     protected $configManager = null;
 
-    /** @var SessionManager Session Manager instance **/
+    /** @var SessionManager Session Manager instance * */
     protected $sessionManager = null;
 
-    /** @var BanManager Ban Manager instance **/
+    /** @var BanManager Ban Manager instance * */
     protected $banManager;
 
-    /** @var bool Whether the user is logged in **/
+    /** @var bool Whether the user is logged in * */
     protected $isLoggedIn = false;
 
-    /** @var bool Whether the Shaarli instance is open to public edition **/
+    /** @var bool Whether the Shaarli instance is open to public edition * */
     protected $openShaarli = false;
 
     /** @var string User sign-in token depending on remote IP and credentials */
@@ -36,7 +38,7 @@ class LoginManager
     /**
      * Constructor
      *
-     * @param ConfigManager  $configManager  Configuration Manager instance
+     * @param ConfigManager $configManager Configuration Manager instance
      * @param SessionManager $sessionManager SessionManager instance
      */
     public function __construct($configManager, $sessionManager)
@@ -86,12 +88,12 @@ class LoginManager
     /**
      * Check user session state and validity (expiration)
      *
-     * @param array  $cookie     The $_COOKIE array
+     * @param array $cookie The $_COOKIE array
      * @param string $clientIpId Client IP address identifier
      */
     public function checkLoginState($cookie, $clientIpId)
     {
-        if (! $this->configManager->exists('credentials.login')) {
+        if (!$this->configManager->exists('credentials.login')) {
             // Shaarli is not configured yet
             $this->isLoggedIn = false;
             return;
@@ -131,10 +133,10 @@ class LoginManager
     /**
      * Check user credentials are valid
      *
-     * @param string $remoteIp   Remote client IP address
+     * @param string $remoteIp Remote client IP address
      * @param string $clientIpId Client IP address identifier
-     * @param string $login      Username
-     * @param string $password   Password
+     * @param string $login Username
+     * @param string $password Password
      *
      * @return bool true if the provided credentials are valid, false otherwise
      */
@@ -148,19 +150,21 @@ class LoginManager
         // Check credentials
         try {
             $useLdapLogin = !empty($this->configManager->get('ldap.host'));
-            if ((false === $useLdapLogin && $this->checkCredentialsFromLocalConfig($login, $password))
+            if ((false === $useLdapLogin && $this->checkCredentialsFromLocalConfig(
+                $login,
+                $password
+            ))
                 || (true === $useLdapLogin && $this->checkCredentialsFromLdap($login, $password))
             ) {
-                    $this->sessionManager->storeLoginInfo($clientIpId);
-                    logm(
-                        $this->configManager->get('resource.log'),
-                        $remoteIp,
-                        'Login successful'
-                    );
-                    return true;
+                $this->sessionManager->storeLoginInfo($clientIpId);
+                logm(
+                    $this->configManager->get('resource.log'),
+                    $remoteIp,
+                    'Login successful'
+                );
+                return true;
             }
-        }
-        catch(Exception $exception) {
+        } catch (Exception $exception) {
             logm(
                 $this->configManager->get('resource.log'),
                 $remoteIp,
@@ -176,43 +180,43 @@ class LoginManager
         return false;
     }
 
-
     /**
      * Check user credentials from local config
      *
-     * @param string $login      Username
-     * @param string $password   Password
+     * @param string $login Username
+     * @param string $password Password
      *
      * @return bool true if the provided credentials are valid, false otherwise
      */
-    public function checkCredentialsFromLocalConfig($login, $password) {
+    public function checkCredentialsFromLocalConfig($login, $password)
+    {
         $hash = sha1($password . $login . $this->configManager->get('credentials.salt'));
 
         return $login == $this->configManager->get('credentials.login')
-             && $hash == $this->configManager->get('credentials.hash');
+            && $hash == $this->configManager->get('credentials.hash');
     }
 
     /**
      * Check user credentials are valid through LDAP bind
      *
-     * @param string $remoteIp   Remote client IP address
+     * @param string $remoteIp Remote client IP address
      * @param string $clientIpId Client IP address identifier
-     * @param string $login      Username
-     * @param string $password   Password
+     * @param string $login Username
+     * @param string $password Password
      *
      * @return bool true if the provided credentials are valid, false otherwise
      */
     public function checkCredentialsFromLdap($login, $password, $connect = null, $bind = null)
     {
-        $connect = $connect ?? function($host) {
-            $resource = ldap_connect($host);
+        $connect = $connect ?? function ($host) {
+                $resource = ldap_connect($host);
 
-            ldap_set_option($resource, LDAP_OPT_PROTOCOL_VERSION, 3);
+                ldap_set_option($resource, LDAP_OPT_PROTOCOL_VERSION, 3);
 
-            return $resource;
+                return $resource;
         };
-        $bind = $bind ?? function($handle, $dn, $password) {
-            return ldap_bind($handle, $dn, $password);
+        $bind = $bind ?? function ($handle, $dn, $password) {
+                return ldap_bind($handle, $dn, $password);
         };
 
         return $bind(
@@ -220,6 +224,64 @@ class LoginManager
             sprintf($this->configManager->get('ldap.dn'), $login),
             $password
         );
+    }
+
+    /**
+     * Check user credentials are valid through JustAuthMe
+     *
+     * @param string $remoteIp Remote client IP address
+     * @param string $clientIpId Client IP address identifier
+     * @param $access_token
+     * @return bool true if the provided credentials are valid, false otherwise
+     */
+    public function checkCredentialsWithJam($remoteIp, $clientIpId, $access_token)
+    {
+        $jamSdk = new JamSdk(
+            $this->configManager->get('jam.app_id'),
+            "",
+            $this->configManager->get('jam.api_secret')
+        );
+        try {
+            $user_infos = $jamSdk->getUserInfos($access_token);
+            $login = $this->configManager->get('credentials.login');
+            /*
+             * Everything is fine, you can now register or login the user,
+             * depending on the presence in your Database of
+             * the provided $user_infos->jam_id
+             */
+            if (isset($user_infos->email) && ($login === $user_infos->email)) {
+                $this->configManager->set('credentials.jam', $user_infos->jam_id, true, true);
+                logm(
+                    $this->configManager->get('resource.log'),
+                    $remoteIp,
+                    'JAM:Update jam_id'
+                );
+            }
+            $pass = $this->configManager->get('credentials.jam');
+            if ($pass === $user_infos->jam_id) {
+                $this->sessionManager->storeLoginInfo($clientIpId);
+                logm(
+                    $this->configManager->get('resource.log'),
+                    $remoteIp,
+                    'JAM:Login successful'
+                );
+                return true;
+            } else {
+                logm(
+                    $this->configManager->get('resource.log'),
+                    $remoteIp,
+                    'JAM:Login failed for user ' . $login
+                );
+                return false;
+            }
+        } catch (\Exception $e) {
+            logm(
+                $this->configManager->get('resource.log'),
+                $_SERVER['REMOTE_ADDR'],
+                "JAM:" . $e->getMessage()
+            );
+            return false;
+        }
     }
 
     /**
@@ -251,6 +313,6 @@ class LoginManager
      */
     public function canLogin($server)
     {
-        return ! $this->banManager->isBanned($server);
+        return !$this->banManager->isBanned($server);
     }
 }
